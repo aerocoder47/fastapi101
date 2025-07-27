@@ -1,0 +1,92 @@
+uvicorn main:app
+
+uvicorn main:app --reload //monitors and restarts server 
+
+
+
+
+CRUD
+
+1. Create  -> POST -> /posts -> @app.post("/posts")
+
+2. Read  -> GET -> /posts/:id -> @app.get("/posts/{id}")
+         -> GET -> /posts/  -> @app.get("/posts")
+
+3. Update -> PUT/PATCH -> /posts/:id -> @app.put("/posts/{id}")
+
+4. Delete -> DELETE -> /posts/:id -> @app.delete("/posts/{id}")
+
+
+
+
+
+// Swagger ui
+http://127.0.0.1:8000/docs
+
+
+
+
+
+
+// redoc 
+http://127.0.0.1:8000/redoc
+
+
+
+uvicorn app.main:app --reload
+
+
+//creates database
+ CREATE DATABASE fastapi
+    WITH
+    OWNER = postgres
+    ENCODING = 'UTF8'
+    CONNECTION LIMIT = -1
+    IS_TEMPLATE = False;
+
+
+
+# psycopg2 
+pip install psycopg2-binary
+
+#1 connect to postgres sql
+import psycopg2
+
+conn = psycopg2.connect(
+    dbname = "your_db_name",
+    user="your_username",
+    password="your_password",
+    host="localhost", # or remote IP,
+    port="5432"
+)
+
+#2 create a cursor
+
+cur = conn.cursor()
+cur.execute("SELECT * FROM users;")
+rows = cur.fetchall()
+
+for row in rows():
+    print(row)
+
+
+#3 Insert database
+name = "alice",
+email = "alice@example.com"
+
+curr.execute(
+"INSERT INTO users (name, email) VALUES (%s, %s)",
+(name, email)
+)
+conn.commit()
+
+#4 close CONNECTION
+cur.close()
+conn.close()
+
+
+# optional with auto close
+with psycopg2.connect(...) as conn:
+    with conn.cursor() as cur:
+        cur.execute("SELECT * FROM users;")
+        print(cur.fetchall())
