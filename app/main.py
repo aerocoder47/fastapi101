@@ -1,7 +1,6 @@
-from typing import Optional
+from typing import Optional, List
 from fastapi import FastAPI, Response, status, HTTPException, Depends
 from fastapi.params import Body
-from pydantic import BaseModel
 from random import randint  
 import psycopg2 
 from psycopg2 import sql
@@ -9,19 +8,14 @@ from psycopg2.extras import RealDictCursor
 import time
 
 from sqlalchemy import select
-from . import models
+from . import models, schemas
 from . database import engine, SessionLocal, get_db
 from sqlalchemy.orm import Session
+from app.schemas import PostCreate 
 
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
-
-
-# title str, content str
-class Post(BaseModel):
-    title: str
-    content: str
 
 while True:
     try:
@@ -47,20 +41,24 @@ async def root():
 def test_posts(db: Session = Depends(get_db)):
     return {"status":"success"}
 
-@app.get("/posts")
+@app.get("/posts", response_model=List[schemas.Post])
 def get_post(db: Session = Depends(get_db)):
     # table_name = "posts"
+    #1
     # query = sql.SQL("SELECT * FROM {}").format(sql.Identifier(table_name))
     # cursor.execute(query)
     # rows = cursor.fetchall()
     # result = [dict(row) for row in rows]
     # return {"data": result}
-    stmt = select(models.Post)
-    posts = db.execute(stmt).scalars().all()
+    #2
+    # stmt = select(models.Post)
+    # posts = db.execute(stmt).scalars().all()
+    # return posts
+    posts = db.query(models.Post).all()
     return posts
 
-@app.post("/posts", status_code=status.HTTP_201_CREATED)
-def create_posts(post: Post, db: Session = Depends(get_db)):
+@app.post("/posts", status_code=status.HTTP_201_CREATED, response_model=schemas.Post)
+def create_posts(post: PostCreate, db: Session = Depends(get_db)):
     # print(new_post.model_dump()) 
     # data = post.model_dump()
     # query = sql.SQL("INSERT INTO {table} ({fields}) VALUES ({placeholders}) RETURNING *").format(
@@ -81,7 +79,7 @@ def create_posts(post: Post, db: Session = Depends(get_db)):
     return new_post
 
 
-@app.get("/posts/latest")
+@app.get("/posts/latest", response_model=schemas.Post)
 def get_post( db: Session = Depends(get_db)):
     # table_name="posts"
     # query = sql.SQL("SELECT * FROM {table} ORDER BY {field} DESC LIMIT 1").format(
@@ -98,7 +96,7 @@ def get_post( db: Session = Depends(get_db)):
     return post
 
 
-@app.get("/posts/{id}")
+@app.get("/posts/{id}", response_model=schemas.Post)
 def get_post(id: int, response: Response, db: Session = Depends(get_db)): 
     # table_name = "posts"
     # query = sql.SQL("SELECT * FROM {table} WHERE {field}={value}").format(
@@ -153,7 +151,7 @@ def delete_post(id: int, db: Session = Depends(get_db)):
 
 
 @app.put("/posts/{id}")
-def update_post(id: int, post: Post, db: Session = Depends(get_db)):
+def update_post(id: int, post: PostCreate, db: Session = Depends(get_db), response_model=schemas.Post):
     # data = post.model_dump()
     # set_clause = sql.SQL(",").join(
     #     sql.SQL("{} = {}").format(
