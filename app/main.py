@@ -8,10 +8,11 @@ from psycopg2.extras import RealDictCursor
 import time
 
 from sqlalchemy import select
-from . import models, schemas
+from . import models, schemas, utils
 from . database import engine, SessionLocal, get_db
 from sqlalchemy.orm import Session
-from app.schemas import PostCreate 
+
+
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -58,7 +59,7 @@ def get_post(db: Session = Depends(get_db)):
     return posts
 
 @app.post("/posts", status_code=status.HTTP_201_CREATED, response_model=schemas.Post)
-def create_posts(post: PostCreate, db: Session = Depends(get_db)):
+def create_posts(post: schemas.PostCreate, db: Session = Depends(get_db)):
     # print(new_post.model_dump()) 
     # data = post.model_dump()
     # query = sql.SQL("INSERT INTO {table} ({fields}) VALUES ({placeholders}) RETURNING *").format(
@@ -151,7 +152,7 @@ def delete_post(id: int, db: Session = Depends(get_db)):
 
 
 @app.put("/posts/{id}")
-def update_post(id: int, post: PostCreate, db: Session = Depends(get_db), response_model=schemas.Post):
+def update_post(id: int, post: schemas.PostCreate, db: Session = Depends(get_db), response_model=schemas.Post):
     # data = post.model_dump()
     # set_clause = sql.SQL(",").join(
     #     sql.SQL("{} = {}").format(
@@ -180,6 +181,95 @@ def update_post(id: int, post: PostCreate, db: Session = Depends(get_db), respon
     existing_post.update(post.model_dump(), synchronize_session=False)
     db.commit()
     return existing_post.first()
-    
 
+
+ # Users   
+@app.post("/login", status_code=status.HTTP_200_OK, response_model= schemas.User)
+def login(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    
+    auth_user =  db.query(models.User).filter(models.User.email == user.email).first()
+
+    if(auth_user and auth_user.password == user.password):
+        return auth_user
+    
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Wrong email or password"
+    )
+
+@app.get("/users", status_code=status.HTTP_200_OK, response_model= List[schemas.UserGet])
+def get_users( db: Session = Depends(get_db)):
+    
+    users = db.query(models.User).all()
+
+    if not users:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Wrong email or password"
+        ) 
+    
+    return users
+
+
+
+@app.post("/create_users", status_code=status.HTTP_201_CREATED, response_model= schemas.User)
+def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    #hash the password - user.password
+    email = user.email.lower()
+   
+    user_exists = db.query(models.User).filter(models.User.email == email).first()
+
+    if user_exists:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already taken")
+
+    hashed_password = utils.hash(user.password)
+    user.password = hashed_password
+
+    new_user = models.User(**user.model_dump())
+
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+ 
+    return new_user
+
+
+@app.delete("/users", status_code=status.HTTP_204_NO_CONTENT)
+def delete_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    email = user.email.lower()
+    user_exists = db.query(models.User).filter(models.User.email == email)
+
+    if(user_exists.first().password == user.password):
+        user_exists.delete()
+        db.commit()
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Wrong email or password")
+    
+    
+@app.put("/users", status_code=status.HTTP_202_ACCEPTED, response_model= schemas.User)
+def update_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    email = user.email.lower()
+    user_exists = db.query(models.User).filter(models.User.email == email)
+
+    if not user_exists.first():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Wrong email or password")
+    
+    if user_exists.first().password == user.password:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Old password used, please provide new password")
+
+    user_exists.update(user.model_dump(), synchronize_session=False)
+    db.commit()
+ 
+    return user_exists.first()
+
+
+@app.get('/users/{id}', response_model=schemas.User)
+def get_user(id: int, db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.id == id).first()
+
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    
+    return user
     
