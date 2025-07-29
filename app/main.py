@@ -6,13 +6,11 @@ import psycopg2
 from psycopg2 import sql
 from psycopg2.extras import RealDictCursor
 import time
-
 from sqlalchemy import select
 from . import models, schemas, utils
 from . database import engine, SessionLocal, get_db
 from sqlalchemy.orm import Session
-
-
+from app.routers import post, user
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -33,6 +31,11 @@ while True:
         print("Error", e)
         time.sleep(2)
 
+
+
+app.include_router(post.router)
+app.include_router(user.router)
+
 @app.get("/")
 async def root():
     return {"message": "Welcome to my api!!"}
@@ -41,235 +44,3 @@ async def root():
 @app.get("/sqlalchemy")
 def test_posts(db: Session = Depends(get_db)):
     return {"status":"success"}
-
-@app.get("/posts", response_model=List[schemas.Post])
-def get_post(db: Session = Depends(get_db)):
-    # table_name = "posts"
-    #1
-    # query = sql.SQL("SELECT * FROM {}").format(sql.Identifier(table_name))
-    # cursor.execute(query)
-    # rows = cursor.fetchall()
-    # result = [dict(row) for row in rows]
-    # return {"data": result}
-    #2
-    # stmt = select(models.Post)
-    # posts = db.execute(stmt).scalars().all()
-    # return posts
-    posts = db.query(models.Post).all()
-    return posts
-
-@app.post("/posts", status_code=status.HTTP_201_CREATED, response_model=schemas.Post)
-def create_posts(post: schemas.PostCreate, db: Session = Depends(get_db)):
-    # print(new_post.model_dump()) 
-    # data = post.model_dump()
-    # query = sql.SQL("INSERT INTO {table} ({fields}) VALUES ({placeholders}) RETURNING *").format(
-    #     table=sql.Identifier("posts"),
-    #     fields=sql.SQL(", ").join(map(sql.Identifier, data.keys())),
-    #     placeholders= sql.SQL(",").join(sql.Placeholder() * len(data))
-    # )
-    # cursor.execute(query, tuple(data.values()))
-    # conn.commit()
-    # inserted_post = cursor.fetchone()
-    # # result = [dict(row) for row in inserted_post]
-
-    # return {"new_post":  f"{dict(inserted_post)}"}
-    new_post = models.Post(**post.model_dump())
-    db.add(new_post)
-    db.commit()
-    db.refresh(new_post)
-    return new_post
-
-
-@app.get("/posts/latest", response_model=schemas.Post)
-def get_post( db: Session = Depends(get_db)):
-    # table_name="posts"
-    # query = sql.SQL("SELECT * FROM {table} ORDER BY {field} DESC LIMIT 1").format(
-    #     table = sql.Identifier(table_name),
-    #     field= sql.Identifier("created_at")
-    # )
-    # cursor.execute(query)
-    # result =  cursor.fetchone()
-    # print(result)
-    # return {"data": f"{dict(result)}"}
-    post = db.query(models.Post).order_by(models.Post.id.desc()).first()
-    if not post:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No post found")
-    return post
-
-
-@app.get("/posts/{id}", response_model=schemas.Post)
-def get_post(id: int, response: Response, db: Session = Depends(get_db)): 
-    # table_name = "posts"
-    # query = sql.SQL("SELECT * FROM {table} WHERE {field}={value}").format(
-    #     table = sql.Identifier(table_name),
-    #     field = sql.Identifier("id"),
-    #     value = sql.Placeholder()
-    # )
-    # cursor.execute(query, (id,))
-    # result = cursor.fetchone()
-    # if not result:
-    #     # response.status_code = status.HTTP_404_NOT_FOUND
-    #     # return {"message": f"post with id: {id} was not found"}
-    #     raise HTTPException(status_code= status.HTTP_404_NOT_FOUND,
-    #                         detail=f"post with id: {id} was not found")
-    # return {"post_details": f"Here is the post {dict(result)}"}
-    post = db.query(models.Post).filter(models.Post.id == id).first()
-    if not post:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
-                            detail="Post not found")
-    return post
-
-@app.delete("/posts/{id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_post(id: int, db: Session = Depends(get_db)):
-    # delete post
-    # find the index of the post
-    #delete the post my_post.pop(index)
-    # query = sql.SQL("DELETE FROM {table} WHERE {field} = {value};").format(
-    #     table=sql.Identifier("posts"),
-    #     field=sql.Identifier("id"),
-    #     value=sql.Placeholder()
-    # )
-    # cursor.execute(query, (id,))
-    # conn.commit()
-    # print("Deleted rows:", cursor.rowcount)
-
-    # if cursor.rowcount == 0:
-    #     #return {"message": f"post doesn't exist"}
-    #     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-    #                     detail=f"Post with id: {id} does not exist")
-   
-    # return Response(status_code=status.HTTP_204_NO_CONTENT)
-    post = db.query(models.Post).filter(models.Post.id == id)
-    if not post.first():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail="Post not found")
-    post.delete(synchronize_session=False)
-    db.commit()
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
-    
-        
-    
-
-
-@app.put("/posts/{id}")
-def update_post(id: int, post: schemas.PostCreate, db: Session = Depends(get_db), response_model=schemas.Post):
-    # data = post.model_dump()
-    # set_clause = sql.SQL(",").join(
-    #     sql.SQL("{} = {}").format(
-    #         sql.Identifier(k), sql.Placeholder()
-    #     ) for k in data.keys()
-    # )
-
-    # query = sql.SQL("UPDATE {table} SET {set_clause}  WHERE {id_field}={value} RETURNING *").format(
-    #     table=sql.Identifier("posts"),
-    #     set_clause= set_clause,
-    #     id_field=sql.Identifier("id"),
-    #     value=sql.Placeholder()
-    # )
-    # values = list(data.values()) + [id]
-    # cursor.execute(query, values)
-    # conn.commit()
-    # result = cursor.fetchone()
-    # if not result :
-    #     return HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
-    #                      detail=f"Post with id: {id} not found")
-       
-    # return {"data": f"{dict(result)}"}
-    existing_post = db.query(models.Post).filter(models.Post.id == id)
-    if not existing_post.first():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
-    existing_post.update(post.model_dump(), synchronize_session=False)
-    db.commit()
-    return existing_post.first()
-
-
- # Users   
-@app.post("/login", status_code=status.HTTP_200_OK, response_model= schemas.User)
-def login(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    
-    auth_user =  db.query(models.User).filter(models.User.email == user.email).first()
-
-    if(auth_user and auth_user.password == user.password):
-        return auth_user
-    
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail="Wrong email or password"
-    )
-
-@app.get("/users", status_code=status.HTTP_200_OK, response_model= List[schemas.UserGet])
-def get_users( db: Session = Depends(get_db)):
-    
-    users = db.query(models.User).all()
-
-    if not users:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Wrong email or password"
-        ) 
-    
-    return users
-
-
-
-@app.post("/create_users", status_code=status.HTTP_201_CREATED, response_model= schemas.User)
-def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    #hash the password - user.password
-    email = user.email.lower()
-   
-    user_exists = db.query(models.User).filter(models.User.email == email).first()
-
-    if user_exists:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already taken")
-
-    hashed_password = utils.hash(user.password)
-    user.password = hashed_password
-
-    new_user = models.User(**user.model_dump())
-
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
- 
-    return new_user
-
-
-@app.delete("/users", status_code=status.HTTP_204_NO_CONTENT)
-def delete_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    email = user.email.lower()
-    user_exists = db.query(models.User).filter(models.User.email == email)
-
-    if(user_exists.first().password == user.password):
-        user_exists.delete()
-        db.commit()
-        return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Wrong email or password")
-    
-    
-@app.put("/users", status_code=status.HTTP_202_ACCEPTED, response_model= schemas.User)
-def update_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    email = user.email.lower()
-    user_exists = db.query(models.User).filter(models.User.email == email)
-
-    if not user_exists.first():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Wrong email or password")
-    
-    if user_exists.first().password == user.password:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Old password used, please provide new password")
-
-    user_exists.update(user.model_dump(), synchronize_session=False)
-    db.commit()
- 
-    return user_exists.first()
-
-
-@app.get('/users/{id}', response_model=schemas.User)
-def get_user(id: int, db: Session = Depends(get_db)):
-    user = db.query(models.User).filter(models.User.id == id).first()
-
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    
-    return user
-    
