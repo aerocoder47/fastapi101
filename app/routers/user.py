@@ -13,7 +13,8 @@ from sqlalchemy.orm import Session
 
 
 router = APIRouter(
-   prefix="/users"
+   prefix="/users",
+   tags=['Users']
 )
 
  # Users   
@@ -32,7 +33,7 @@ def get_users( db: Session = Depends(get_db)):
     
     return users
 
-@router.get('/{id}', response_model=schemas.User)
+@router.get('/{id}', response_model=schemas.UserOut)
 def get_user(id: int, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.id == id).first()
 
@@ -42,7 +43,7 @@ def get_user(id: int, db: Session = Depends(get_db)):
     return user
     
 
-@router.post("/create", status_code=status.HTTP_201_CREATED, response_model= schemas.User)
+@router.post("/create", status_code=status.HTTP_201_CREATED, response_model= schemas.UserOut)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     #hash the password - user.password
     email = user.email.lower()
@@ -63,7 +64,7 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
  
     return new_user
 
-@router.post("/login", status_code=status.HTTP_200_OK, response_model= schemas.User)
+@router.post("/login", status_code=status.HTTP_200_OK, response_model= schemas.UserOut)
 def login(user: schemas.UserCreate, db: Session = Depends(get_db)):
     
     auth_user =  db.query(models.User).filter(models.User.email == user.email).first()
@@ -89,7 +90,7 @@ def delete_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Wrong email or password")
     
     
-@router.put("/", status_code=status.HTTP_202_ACCEPTED, response_model= schemas.User)
+@router.put("/", status_code=status.HTTP_202_ACCEPTED, response_model= schemas.UserOut)
 def update_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     email = user.email.lower()
     user_exists = db.query(models.User).filter(models.User.email == email)

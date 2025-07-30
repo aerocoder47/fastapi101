@@ -174,3 +174,11 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
 # for password hashing
 
 pip install 'passlib[bcrypt]'
+
+
+
+# generate and verify JWT tokens
+pip install "python-jose[crptography]"
+
+# generates 32 long char string
+openssl rand -hex 32

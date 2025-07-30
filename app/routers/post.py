@@ -12,7 +12,8 @@ from app.database import engine, SessionLocal, get_db
 from sqlalchemy.orm import Session
 
 router = APIRouter(
-    prefix="/posts"
+    prefix="/posts",
+    tags=['Posts']
 )
 
 
