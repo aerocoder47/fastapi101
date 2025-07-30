@@ -7,7 +7,7 @@ from psycopg2 import sql
 from psycopg2.extras import RealDictCursor
 import time
 from sqlalchemy import select
-from app import models, schemas, utils
+from app import models, schemas, utils, oauth2
 from app.database import engine, SessionLocal, get_db
 from sqlalchemy.orm import Session
 
@@ -18,7 +18,7 @@ router = APIRouter(
 
 
 @router.get("/", response_model=List[schemas.Post])
-def get_post(db: Session = Depends(get_db)):
+def get_post(db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
     # table_name = "posts"
     #1
     # query = sql.SQL("SELECT * FROM {}").format(sql.Identifier(table_name))
@@ -34,7 +34,7 @@ def get_post(db: Session = Depends(get_db)):
     return posts
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=schemas.Post)
-def create_posts(post: schemas.PostCreate, db: Session = Depends(get_db)):
+def create_posts(post: schemas.PostCreate, db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
     # print(new_post.model_dump()) 
     # data = post.model_dump()
     # query = sql.SQL("INSERT INTO {table} ({fields}) VALUES ({placeholders}) RETURNING *").format(
@@ -48,6 +48,7 @@ def create_posts(post: schemas.PostCreate, db: Session = Depends(get_db)):
     # # result = [dict(row) for row in inserted_post]
 
     # return {"new_post":  f"{dict(inserted_post)}"}
+    print(current_user)
     new_post = models.Post(**post.model_dump())
     db.add(new_post)
     db.commit()
@@ -56,7 +57,7 @@ def create_posts(post: schemas.PostCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/latest", response_model=schemas.Post)
-def get_post( db: Session = Depends(get_db)):
+def get_post( db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
     # table_name="posts"
     # query = sql.SQL("SELECT * FROM {table} ORDER BY {field} DESC LIMIT 1").format(
     #     table = sql.Identifier(table_name),
@@ -66,6 +67,8 @@ def get_post( db: Session = Depends(get_db)):
     # result =  cursor.fetchone()
     # print(result)
     # return {"data": f"{dict(result)}"}
+    print(current_user.email)
+
     post = db.query(models.Post).order_by(models.Post.id.desc()).first()
     if not post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No post found")
@@ -73,7 +76,7 @@ def get_post( db: Session = Depends(get_db)):
 
 
 @router.get("/{id}", response_model=schemas.Post)
-def get_post(id: int, response: Response, db: Session = Depends(get_db)): 
+def get_post(id: int, response: Response, db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)): 
     # table_name = "posts"
     # query = sql.SQL("SELECT * FROM {table} WHERE {field}={value}").format(
     #     table = sql.Identifier(table_name),
@@ -95,7 +98,7 @@ def get_post(id: int, response: Response, db: Session = Depends(get_db)):
     return post
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_post(id: int, db: Session = Depends(get_db)):
+def delete_post(id: int, db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
     # delete post
     # find the index of the post
     #delete the post my_post.pop(index)
@@ -127,7 +130,7 @@ def delete_post(id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/{id}")
-def update_post(id: int, post: schemas.PostCreate, db: Session = Depends(get_db), response_model=schemas.Post):
+def update_post(id: int, post: schemas.PostCreate, db: Session = Depends(get_db), response_model=schemas.Post, current_user: int = Depends(oauth2.get_current_user)):
     # data = post.model_dump()
     # set_clause = sql.SQL(",").join(
     #     sql.SQL("{} = {}").format(

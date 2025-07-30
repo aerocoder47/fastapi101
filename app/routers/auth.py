@@ -5,7 +5,7 @@ from app import database, schemas, models, utils, oauth2
 
 router = APIRouter(tags=['Authentication'])
 
-@router.post('/login')
+@router.post('/login', response_model=schemas.Token)
 def login(user_cred: OAuth2PasswordRequestForm = Depends() , db: Session = Depends(database.get_db)):
     #{username:"" , password:""} : user_cred
     
@@ -19,4 +19,4 @@ def login(user_cred: OAuth2PasswordRequestForm = Depends() , db: Session = Depen
 
     raise HTTPException(status_code=status.HTTP_403_NOT_FOUND, detail="Invalid Credentials")
 
- 
+   
