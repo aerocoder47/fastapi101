@@ -1,14 +1,7 @@
 from typing import Optional, List
-from fastapi import FastAPI, Response, status, HTTPException, Depends, APIRouter
-from fastapi.params import Body
-from random import randint  
-import psycopg2 
-from psycopg2 import sql
-from psycopg2.extras import RealDictCursor
-import time
-from sqlalchemy import select
-from app import models, schemas, utils, oauth2
-from app.database import engine, SessionLocal, get_db
+from fastapi import Response, status, HTTPException, Depends, APIRouter
+from app import models, schemas, oauth2
+from app.database import get_db
 from sqlalchemy.orm import Session
 
 router = APIRouter(
@@ -18,7 +11,8 @@ router = APIRouter(
 
 
 @router.get("/", response_model=List[schemas.Post])
-def get_post(db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
+def get_post(db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user),
+              limit: int = 3, skip: int = 0, search: Optional[str]=""):
     # table_name = "posts"
     #1
     # query = sql.SQL("SELECT * FROM {}").format(sql.Identifier(table_name))
@@ -30,11 +24,14 @@ def get_post(db: Session = Depends(get_db), current_user: int = Depends(oauth2.g
     # stmt = select(models.Post)
     # posts = db.execute(stmt).scalars().all()
     # return posts
-    posts = db.query(models.Post).all()
+    posts = db.query(models.Post).filter(models.Post.title.contains(search)).limit(limit).offset(skip).all()
+    print(limit)
     return posts
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=schemas.Post)
-def create_posts(post: schemas.PostCreate, db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
+def create_posts(post: schemas.PostCreate, db: Session = Depends(get_db),
+                 current_user: int = Depends(oauth2.get_current_user),
+                ):
     # print(new_post.model_dump()) 
     # data = post.model_dump()
     # query = sql.SQL("INSERT INTO {table} ({fields}) VALUES ({placeholders}) RETURNING *").format(
@@ -48,8 +45,8 @@ def create_posts(post: schemas.PostCreate, db: Session = Depends(get_db), curren
     # # result = [dict(row) for row in inserted_post]
 
     # return {"new_post":  f"{dict(inserted_post)}"}
-    print(current_user)
-    new_post = models.Post(**post.model_dump())
+   
+    new_post = models.Post(owner_id=current_user.id,**post.model_dump())
     db.add(new_post)
     db.commit()
     db.refresh(new_post)
@@ -118,9 +115,15 @@ def delete_post(id: int, db: Session = Depends(get_db), current_user: int = Depe
    
     # return Response(status_code=status.HTTP_204_NO_CONTENT)
     post = db.query(models.Post).filter(models.Post.id == id)
+
+
     if not post.first():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail="Post not found")
+    
+    if post.first().owner_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Not authorized to perform requested action")
     post.delete(synchronize_session=False)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -156,6 +159,11 @@ def update_post(id: int, post: schemas.PostCreate, db: Session = Depends(get_db)
     existing_post = db.query(models.Post).filter(models.Post.id == id)
     if not existing_post.first():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
+    
+    if existing_post.first().owner_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Not authorized to perform requested action")
+
     existing_post.update(post.model_dump(), synchronize_session=False)
     db.commit()
     return existing_post.first()

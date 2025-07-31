@@ -1,35 +1,12 @@
-from typing import Optional, List
-from fastapi import FastAPI, Response, status, HTTPException, Depends
-from fastapi.params import Body
-from random import randint  
-import psycopg2 
-from psycopg2 import sql
-from psycopg2.extras import RealDictCursor
-import time
-from sqlalchemy import select
-from app import models, schemas, utils, oauth2
-from app.database import engine, SessionLocal, get_db
+from fastapi import FastAPI, Depends
+from app import models
+from app.database import engine, get_db
 from sqlalchemy.orm import Session
 from app.routers import post, user, auth
 
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
-
-while True:
-    try:
-        conn = psycopg2.connect(
-            host='127.0.0.1', database='fastapi',  user='postgres', password='4747', cursor_factory=RealDictCursor
-        )
-
-        cursor = conn.cursor()
-        print("Database connection was successful")
-        break
-
-    except Exception as e:
-        print("Connecting to database failed")
-        print("Error", e)
-        time.sleep(2)
 
 
 
