@@ -25,7 +25,6 @@ def get_post(db: Session = Depends(get_db), current_user: int = Depends(oauth2.g
     # posts = db.execute(stmt).scalars().all()
     # return posts
     posts = db.query(models.Post).filter(models.Post.title.contains(search)).limit(limit).offset(skip).all()
-    print(limit)
     return posts
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=schemas.Post)
@@ -64,7 +63,7 @@ def get_post( db: Session = Depends(get_db), current_user: int = Depends(oauth2.
     # result =  cursor.fetchone()
     # print(result)
     # return {"data": f"{dict(result)}"}
-    print(current_user.email)
+    # print(current_user.email)
 
     post = db.query(models.Post).order_by(models.Post.id.desc()).first()
     if not post:
