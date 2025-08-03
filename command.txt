@@ -266,3 +266,17 @@ alembic revision --autogenerate -m "auto-vote"
 pip freeze > requirements.txt
 
 pip install -r requirements.txt 
+
+
+
+
+
+
+#
+heroku addons:create heroku-postgresql:hobby-dev --help
+
+
+
+heroku apps: info fastapi101
+
+heroku run "alembic upgrade heads"
