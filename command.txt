@@ -182,3 +182,63 @@ pip install "python-jose[crptography]"
 
 # generates 32 long char string
 openssl rand -hex 32
+
+
+
+# Tutorial for sql
+https://neon.com/postgresql/tutorial
+
+
+
+
+
+#######
+#connect to postgresql
+
+
+#1
+ psql -U postgres
+
+#2 enter password
+postgres=#
+
+#3 switch the current db to dvdrental
+\c dvdrental
+
+
+
+#CONNECTION cmd
+psql -U <username> -d <database_name> -h <host> -p <port>
+eg psql -U postgres -d mydb -h localhost -p 5432
+
+
+#CONNECTION using psycopg2
+import psycopg2
+
+conn = psycopg2.connect(
+    dbname="mydb",
+    user="postgres",
+    password="your_password",
+    host="localhost",
+    port="5432"
+)
+cur = conn.cursor()
+cur.execute("SELECT * FROM my_table;")
+rows = cur.fetchall()
+
+
+#Run sql scripts
+psql -U <username> -d <database_name> -f path/to/your_script.sql
+eg psql -U postgres -d mydb -f ./init.sql
+
+
+#psql shell
+\i path/to/your_script.sql
+
+#Example to create a user, db and a table
+#1 connect to super user
+psql -U postgres
+#2 create a database & user
+CREATE DATABASE mydb;
+CREATE USER harish WITH PASSWORD 'your_password';
+GRANT ALL PRIVILEGES ON DATABASE mydb TO harish;

@@ -53,6 +53,12 @@ class Post(PostBase):
     class Config:
         from_attributes = True 
 
+class PostJoinVote(BaseModel):
+    Post: Post
+    votes: int
+
+    class Config:
+        from_attributes = True
 
 class Token(BaseModel):
     access_token: str

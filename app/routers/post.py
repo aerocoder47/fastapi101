@@ -3,6 +3,7 @@ from fastapi import Response, status, HTTPException, Depends, APIRouter
 from app import models, schemas, oauth2
 from app.database import get_db
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 router = APIRouter(
     prefix="/posts",
@@ -10,7 +11,7 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=List[schemas.Post])
+@router.get("/", response_model=List[schemas.PostJoinVote])
 def get_post(db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user),
               limit: int = 3, skip: int = 0, search: Optional[str]=""):
     # table_name = "posts"
@@ -24,8 +25,14 @@ def get_post(db: Session = Depends(get_db), current_user: int = Depends(oauth2.g
     # stmt = select(models.Post)
     # posts = db.execute(stmt).scalars().all()
     # return posts
-    posts = db.query(models.Post).filter(models.Post.title.contains(search)).limit(limit).offset(skip).all()
-    return posts
+    # posts = db.query(models.Post).filter(models.Post.title.contains(search)).limit(limit).offset(skip).all()
+
+    result = db.query(models.Post, func.count(models.Vote.post_id).label("votes")
+                      ).filter(models.Post.title.contains(search)).join(models.Vote, models.Vote.post_id == models.Post.id, isouter=True
+                             ).group_by(models.Post.id
+                                        ).order_by(models.Post.id.desc()).limit(limit).offset(skip).all()
+     
+    return result
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=schemas.Post)
 def create_posts(post: schemas.PostCreate, db: Session = Depends(get_db),
@@ -71,7 +78,7 @@ def get_post( db: Session = Depends(get_db), current_user: int = Depends(oauth2.
     return post
 
 
-@router.get("/{id}", response_model=schemas.Post)
+@router.get("/{id}", response_model=schemas.PostJoinVote)
 def get_post(id: int, response: Response, db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)): 
     # table_name = "posts"
     # query = sql.SQL("SELECT * FROM {table} WHERE {field}={value}").format(
@@ -87,7 +94,11 @@ def get_post(id: int, response: Response, db: Session = Depends(get_db), current
     #     raise HTTPException(status_code= status.HTTP_404_NOT_FOUND,
     #                         detail=f"post with id: {id} was not found")
     # return {"post_details": f"Here is the post {dict(result)}"}
-    post = db.query(models.Post).filter(models.Post.id == id).first()
+    post = db.query(models.Post, func.count(models.Vote.post_id).label("votes")).filter(models.Post.id == id
+                                        ).join(models.Vote, models.Post.id == models.Vote.post_id, isouter=True
+                                               ).group_by(models.Post.id)
+
+    post = post.first()
     if not post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
                             detail="Post not found")
