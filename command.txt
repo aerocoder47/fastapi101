@@ -242,3 +242,22 @@ psql -U postgres
 CREATE DATABASE mydb;
 CREATE USER harish WITH PASSWORD 'your_password';
 GRANT ALL PRIVILEGES ON DATABASE mydb TO harish;
+
+
+
+$ DB migration
+pip install alembic
+
+
+
+alembic current
+alembic revision -m "name"
+alembic upgrade versionID
+alembic head
+alembic update head
+
+alembic downgrade -1
+
+alembic history
+
+alembic revision --autogenerate -m "auto-vote"
